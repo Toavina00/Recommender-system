@@ -21,5 +21,3 @@ artifacts/
 # Jupyter
 .ipynb*/
 
-# Notebook
-notebook.ipynb
