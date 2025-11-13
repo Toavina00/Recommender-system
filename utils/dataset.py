@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Tuple
 import numpy as np
 
 
-class Ratings:
+class Dataset:
     __slots__ = (
         "user_movies",
         "movie_users",
@@ -69,8 +69,8 @@ class Ratings:
         return length
 
 
-def train_test_load(file_path: str, test_split: float = 0.2) -> Tuple[Ratings, Ratings]:
-    train, test = Ratings(), Ratings()
+def train_test_load(file_path: str, test_split: float = 0.2) -> Tuple[Dataset, Dataset]:
+    train, test = Dataset(), Dataset()
 
     with open(file_path) as f:
         _ = f.readline()

@@ -1,7 +1,7 @@
-from utils.dataset import Ratings
+from utils.dataset import Dataset
 
 
-def test_train_test_split(train: Ratings, test: Ratings, test_split: float):
+def test_train_test_split(train: Dataset, test: Dataset, test_split: float):
     # Check for index inconsistency
     assert test.movie_id_to_idx == train.movie_id_to_idx, (
         "Inconsistent movie_id indexing"
