@@ -176,7 +176,7 @@ def training_loop(
         0, np.sqrt(embedding_dim), (n_user, embedding_dim)
     )
     movie_embeddings = np.random.normal(
-        0, np.sqrt(embedding_dim), (n_user, embedding_dim)
+        0, np.sqrt(embedding_dim), (n_movie, embedding_dim)
     )
 
     for iter in range(n_iter):
