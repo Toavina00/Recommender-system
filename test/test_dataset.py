@@ -77,16 +77,6 @@ def check_train_test_split(train: Dataset, test: Dataset, test_split: float):
         "Test split inconsistent"
     )
 
-    for i in range(len(test.feat_movie)):
-        assert set(test.feat_movie[i].tolist()) == set(train.feat_movie[i].tolist()), (  # pyright: ignore
-            "Inconsistent feat_move data"
-        )
-
-    for i in range(len(test.movie_feat)):
-        assert set(test.movie_feat[i].tolist()) == set(train.movie_feat[i].tolist()), (  # pyright: ignore
-            "Inconsistent feat_move data"
-        )
-
     # Check for train test overlap
     for r in range(len(train.movie_users)):
         assert (

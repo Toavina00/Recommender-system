@@ -73,6 +73,12 @@ class Dataset:
         self.movie_users[m_idx][0].append(u_idx)  # pyright: ignore
         self.movie_users[m_idx][1].append(rating)  # pyright: ignore
 
+        for feat_id in movie_feat:
+            f_idx = self.feat_id_to_idx[feat_id]
+            m_idx = self.movie_id_to_idx[movie_id]
+            self.feat_movie[f_idx].append(m_idx)  # pyright: ignore
+            self.movie_feat[m_idx].append(f_idx)  # pyright: ignore
+
     def convert(self):
         for i in range(len(self.user_movies)):
             self.user_movies[i] = (
