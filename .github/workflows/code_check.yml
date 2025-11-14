@@ -1,0 +1,45 @@
+name: Code Checks
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  run-code-checks:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: checkout repository
+      uses: actions/checkout@v4
+
+    - name: fetch latest main branch
+      run: git fetch origin development
+      
+    - name: install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: "0.5.29"
+
+    - name: install python
+      uses: actions/setup-python@v5
+      with:
+        python-version-file: "pyproject.toml"
+        
+    - name: install python packages
+      run: uv sync
+
+    - name: list python packages
+      run: uv pip list
+
+    - name: run ruff code checks
+      run: uv run ruff check
+  
+    - name: run pyright type-hinting checks
+      run: uv run pyright
+
+    - name: Run pytest
+      run: uv run pytest
