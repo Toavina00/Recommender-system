@@ -7,7 +7,6 @@ def save_params(
     fname: str, idx_to_id: List[Any], embedding: np.ndarray, bias: np.ndarray
 ) -> None:
     with open(fname, "x") as f:
-        f.write("id,embedding,bias\n")
         for i in range(len(idx_to_id)):
             id = idx_to_id[i]
             emb = " ".join([f"{k:.18e}" for k in embedding[i]])
@@ -18,9 +17,6 @@ def save_params(
 def load_params(fname: str) -> Tuple[List[Any], np.ndarray, np.ndarray]:
     idx_to_id, embedding, bias = [], [], []
     with open(fname, "r") as f:
-        header = f.readline()
-        assert header == "id,embedding,bias", "incorrect header"
-
         while line := f.readline():
             id, emb, b = line.split(",")
             idx_to_id.append(id)
