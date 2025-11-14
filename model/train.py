@@ -4,7 +4,7 @@ import numba as nb
 import numpy as np
 
 
-# @nb.njit(cache=True)
+#@nb.njit(cache=True)
 def compute_loss(
     r_lambda: float,
     r_gamma: float,
@@ -47,7 +47,7 @@ def compute_loss(
     return loss
 
 
-# @nb.njit(cache=True)
+#@nb.njit(cache=True)
 def compute_rmse(
     user_movies: List[Tuple[np.ndarray, np.ndarray]],
     user_bias: np.ndarray,
@@ -77,7 +77,7 @@ def compute_rmse(
     return error
 
 
-# @nb.njit(parallel=True, cache=True)
+#@nb.njit(parallel=True, cache=True)
 def optimize_users(
     train_user_movies: List[Tuple[np.ndarray, np.ndarray]],
     embedding_dim: int,
@@ -121,7 +121,7 @@ def optimize_users(
         user_bias[user_idx] = new_user_bias
 
 
-# @nb.njit(parallel=True, cache=True)
+#@nb.njit(parallel=True, cache=True)
 def optimize_movie(
     train_movie_users: List[Tuple[np.ndarray, np.ndarray]],
     movie_feat: List[np.ndarray],
@@ -151,11 +151,12 @@ def optimize_movie(
         )
         user_vec = user_embeddings[users].T @ (
             ratings - user_bias[users] - movie_bias[movie_idx]
-        ) + (r_tau * feature_vec)
+        ) 
 
         users_mat *= r_lambda
         users_mat += r_tau * np.eye(embedding_dim)
         user_vec *= r_lambda
+        user_vec += r_tau * feature_vec
 
         new_movie_bias *= r_lambda
         new_movie_bias /= r_lambda * len(ratings) + r_gamma
@@ -167,7 +168,7 @@ def optimize_movie(
         movie_bias[movie_idx] = new_movie_bias
 
 
-# @nb.njit(parallel=True, cache=True)
+#@nb.njit(parallel=True, cache=True)
 def optimize_features(
     movie_feat: List[np.ndarray],
     feat_movie: List[np.ndarray],
@@ -198,7 +199,7 @@ def optimize_features(
     feat_embeddings = new_feat_embeddings
 
 
-# @nb.njit(cache=True)
+#@nb.njit(cache=True)
 def training_loop(
     train_user_movies: List[Tuple[np.ndarray, np.ndarray]],
     train_movie_users: List[Tuple[np.ndarray, np.ndarray]],
@@ -240,7 +241,7 @@ def training_loop(
     )
     movie_embeddings = np.random.normal(
         0, np.sqrt(embedding_dim), (n_movie, embedding_dim)
-    )
+    ) 
     feat_embeddings = np.random.normal(
         0, np.sqrt(embedding_dim), (n_feat, embedding_dim)
     )
@@ -271,7 +272,7 @@ def training_loop(
             feat_embeddings,
         )
         optimize_features(
-            movie_feat, feat_movie, embedding_dim, movie_embeddings, feat_embeddings
+           movie_feat, feat_movie, embedding_dim, movie_embeddings, feat_embeddings
         )
 
         train_loss[iter] = compute_loss(
