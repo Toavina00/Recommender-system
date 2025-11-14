@@ -10,6 +10,7 @@ dependencies = [
     "matplotlib>=3.10.7",
     "numba>=0.62.1",
     "numpy>=2.3.4",
+    "pandas>=2.3.3",
     "pyright>=1.1.407",
     "pytest>=9.0.1",
     "ruff>=0.14.4",

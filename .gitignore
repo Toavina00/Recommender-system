@@ -13,7 +13,7 @@ wheels/
 data/
 
 # Artifacts
-artifacts/
+artifacts/model/
 
 # Cache
 *cache/
