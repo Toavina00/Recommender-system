@@ -4,7 +4,7 @@ import numba as nb
 import numpy as np
 
 
-@nb.njit(cache=True)
+@nb.njit
 def compute_loss(
     r_lambda: float,
     r_gamma: float,
@@ -48,7 +48,7 @@ def compute_loss(
     return loss
 
 
-@nb.njit(cache=True)
+@nb.njit
 def compute_rmse(
     user_movies: List[Tuple[np.ndarray, np.ndarray]],
     user_bias: np.ndarray,
@@ -78,7 +78,7 @@ def compute_rmse(
     return error
 
 
-@nb.njit(parallel=True, cache=True)
+@nb.njit(parallel=True)
 def optimize_users(
     train_user_movies: List[Tuple[np.ndarray, np.ndarray]],
     embedding_dim: int,
@@ -122,7 +122,7 @@ def optimize_users(
         user_bias[user_idx] = new_user_bias
 
 
-@nb.njit(parallel=True, cache=True)
+@nb.njit(parallel=True)
 def optimize_movie(
     train_movie_users: List[Tuple[np.ndarray, np.ndarray]],
     movie_feat: List[np.ndarray],
@@ -169,7 +169,7 @@ def optimize_movie(
         movie_bias[movie_idx] = new_movie_bias
 
 
-@nb.njit(parallel=True, cache=True)
+@nb.njit(parallel=True)
 def optimize_features(
     movie_feat: List[np.ndarray],
     feat_movie: List[np.ndarray],
@@ -203,7 +203,7 @@ def optimize_features(
     feat_embeddings = new_feat_embeddings
 
 
-@nb.njit(cache=True)
+@nb.njit
 def training_loop(
     train_user_movies: List[Tuple[np.ndarray, np.ndarray]],
     train_movie_users: List[Tuple[np.ndarray, np.ndarray]],
