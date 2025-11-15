@@ -65,14 +65,26 @@ def check_train_test_split(train: Dataset, test: Dataset, test_split: float):
     )
     assert test.user_id_to_idx == train.user_id_to_idx, "Inconsistent user_id indexing"
     assert test.feat_id_to_idx == train.feat_id_to_idx, "Inconsistent feat_id indexing"
+
     assert len(test.user_movies) == len(train.user_movies), (
         "Inconsistent user_movies data"
     )
     assert len(test.movie_users) == len(train.movie_users), (
         "Inconsistent movie_users data"
     )
+
     assert len(test.feat_movie) == len(train.feat_movie), "Inconsistent feat_move data"
     assert len(test.movie_feat) == len(train.movie_feat), "Inconsistent movie_feat data"
+    for i in range(len(test.feat_movie)):
+        assert set([*test.feat_movie[i]]) == set([*train.feat_movie[i]]), (
+            "Inconsistent feat_move data"
+        )
+
+    for i in range(len(test.movie_feat)):
+        assert set([*test.movie_feat[i]]) == set([*train.movie_feat[i]]), (
+            "Inconsistent feat_move data"
+        )
+
     assert ((len(test) / (len(train) + len(test))) - test_split) < 1e-2, (
         "Test split inconsistent"
     )
