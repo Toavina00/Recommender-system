@@ -156,6 +156,43 @@ def optimize_movie(
 
 
 @nb.njit
+def update_params(
+    train_movie_users: List[Tuple[np.ndarray, np.ndarray]],
+    train_user_movies: List[Tuple[np.ndarray, np.ndarray]],
+    embedding_dim: int,
+    r_lambda: float,
+    r_gamma: float,
+    r_tau: float,
+    user_bias: np.ndarray,
+    movie_bias: np.ndarray,
+    user_embeddings: np.ndarray,
+    movie_embeddings: np.ndarray,
+):
+    optimize_users(
+        train_user_movies,
+        embedding_dim,
+        r_lambda,
+        r_gamma,
+        r_tau,
+        user_bias,
+        movie_bias,
+        user_embeddings,
+        movie_embeddings,
+    )
+    optimize_movie(
+        train_movie_users,
+        embedding_dim,
+        r_lambda,
+        r_gamma,
+        r_tau,
+        user_bias,
+        movie_bias,
+        user_embeddings,
+        movie_embeddings,
+    )
+
+
+@nb.njit
 def training_loop(
     train_user_movies: List[Tuple[np.ndarray, np.ndarray]],
     train_movie_users: List[Tuple[np.ndarray, np.ndarray]],
@@ -196,19 +233,9 @@ def training_loop(
     )
 
     for iter in range(n_iter):
-        optimize_users(
-            train_user_movies,
-            embedding_dim,
-            r_lambda,
-            r_gamma,
-            r_tau,
-            user_bias,
-            movie_bias,
-            user_embeddings,
-            movie_embeddings,
-        )
-        optimize_movie(
+        update_params(
             train_movie_users,
+            train_user_movies,
             embedding_dim,
             r_lambda,
             r_gamma,
