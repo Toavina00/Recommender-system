@@ -1,5 +1,5 @@
 import csv
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 import numpy as np
 
@@ -10,8 +10,8 @@ class Dataset:
         "movie_users",
     )
 
-    __movie_feat: List[List[int] | np.ndarray] = list()
-    __feat_movie: List[List[int] | np.ndarray] = list()
+    __movie_feat: List[Set[int] | np.ndarray] = list()
+    __feat_movie: List[Set[int] | np.ndarray] = list()
     __idx_to_user_id: List[Any] = list()
     __idx_to_movie_id: List[Any] = list()
     __idx_to_feat_id: List[Any] = list()
@@ -67,18 +67,18 @@ class Dataset:
         if movie_id not in self.movie_id_to_idx:
             self.movie_id_to_idx[movie_id] = len(self.idx_to_movie_id)
             self.idx_to_movie_id.append(movie_id)
-            self.movie_feat.append([])
+            self.movie_feat.append(set())
 
         for feat_id in movie_feat:
             if feat_id not in self.feat_id_to_idx:
                 self.feat_id_to_idx[feat_id] = len(self.feat_id_to_idx)
                 self.idx_to_feat_id.append(feat_id)
-                self.feat_movie.append([])
+                self.feat_movie.append(set())
 
             f_idx = self.feat_id_to_idx[feat_id]
             m_idx = self.movie_id_to_idx[movie_id]
-            self.movie_feat[m_idx].append(f_idx)  # pyright: ignore
-            self.feat_movie[f_idx].append(m_idx)  # pyright: ignore
+            self.movie_feat[m_idx].add(f_idx)  # pyright: ignore
+            self.feat_movie[f_idx].add(m_idx)  # pyright: ignore
 
     def add_entry(
         self, user_id: Any, movie_id: Any, movie_feat: List[Any], rating: float
@@ -119,12 +119,12 @@ class Dataset:
             )
 
         for i in range(len(self.movie_feat)):
-            if isinstance(self.movie_feat[i], list):
-                self.movie_feat[i] = np.array(self.movie_feat[i], dtype=int)
+            if isinstance(self.movie_feat[i], set):
+                self.movie_feat[i] = np.array(list(self.movie_feat[i]), dtype=int)
 
         for i in range(len(self.feat_movie)):
-            if isinstance(self.feat_movie[i], list):
-                self.feat_movie[i] = np.array(self.feat_movie[i], dtype=int)
+            if isinstance(self.feat_movie[i], set):
+                self.feat_movie[i] = np.array(list(self.feat_movie[i]), dtype=int)
 
     def __len__(self) -> int:
         length = 0

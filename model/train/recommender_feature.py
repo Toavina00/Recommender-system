@@ -96,6 +96,7 @@ def optimize_users(
         if len(ratings) == 0:
             continue
 
+        # Bias Update
         new_user_bias = np.sum(
             ratings
             - (
@@ -103,6 +104,12 @@ def optimize_users(
                 + movie_bias[movies]
             )
         )
+        new_user_bias *= r_lambda
+        new_user_bias /= r_lambda * len(ratings) + r_gamma
+
+        user_bias[user_idx] = new_user_bias
+
+        # Embedding Update
         movie_mat = movie_embeddings[movies].T @ movie_embeddings[movies]
         movie_vec = movie_embeddings[movies].T @ (
             ratings - movie_bias[movies] - user_bias[user_idx]
@@ -112,14 +119,10 @@ def optimize_users(
         movie_mat += r_tau * np.eye(embedding_dim)
         movie_vec *= r_lambda
 
-        new_user_bias *= r_lambda
-        new_user_bias /= r_lambda * len(ratings) + r_gamma
-
         inv_movie_mat = np.linalg.inv(movie_mat)
         new_user_embedding = inv_movie_mat @ movie_vec
 
         user_embeddings[user_idx] = new_user_embedding
-        user_bias[user_idx] = new_user_bias
 
 
 @nb.njit(parallel=True)
@@ -142,10 +145,17 @@ def optimize_movie(
         if len(ratings) == 0:
             continue
 
+        # Bias Update
         new_movie_bias = np.sum(
             ratings
             - (user_embeddings[users] @ movie_embeddings[movie_idx] + user_bias[users])
         )
+        new_movie_bias *= r_lambda
+        new_movie_bias /= r_lambda * len(ratings) + r_gamma
+
+        movie_bias[movie_idx] = new_movie_bias
+
+        # Embedding Update
         users_mat = user_embeddings[users].T @ user_embeddings[users]
         feature_vec = feat_embeddings[movie_feat[movie_idx]].sum(axis=0) / np.sqrt(
             len(movie_feat[movie_idx])
@@ -159,14 +169,10 @@ def optimize_movie(
         user_vec *= r_lambda
         user_vec += r_tau * feature_vec
 
-        new_movie_bias *= r_lambda
-        new_movie_bias /= r_lambda * len(ratings) + r_gamma
-
         inv_user_mat = np.linalg.inv(users_mat)
         new_movie_embedding = inv_user_mat @ user_vec
 
         movie_embeddings[movie_idx] = new_movie_embedding
-        movie_bias[movie_idx] = new_movie_bias
 
 
 @nb.njit(parallel=True)
