@@ -41,19 +41,19 @@ def check_dataloader(data: Dataset):
                 "Inconsistent Movie-User map index"
             )
         if len(data.movie_feat[i]) > 0:
-            assert np.min(data.movie_feat[i]) >= 0, (
+            assert np.min(data.movie_feat[i]) >= 0, (  # pyright: ignore
                 "Inconsistent Movie-Feature map index"
             )
-            assert np.max(data.movie_feat[i]) < len(data.feat_movie), (
+            assert np.max(data.movie_feat[i]) < len(data.feat_movie), (  # pyright: ignore
                 "Inconsistent Movie-Feature map index"
             )
 
     for i in range(len(data.feat_movie)):
         if len(data.feat_movie[i]) > 0:
-            assert np.min(data.feat_movie[i]) >= 0, (
+            assert np.min(data.feat_movie[i]) >= 0, (  # pyright: ignore
                 "Inconsistent Feature-Movie map index"
             )
-            assert np.max(data.feat_movie[i]) < len(data.movie_feat), (
+            assert np.max(data.feat_movie[i]) < len(data.movie_feat), (  # pyright: ignore
                 "Inconsistent Feature-Movie map index"
             )
 
