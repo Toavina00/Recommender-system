@@ -195,6 +195,7 @@ def optimize_features(
             scale[i] = 1.0 / np.sqrt(len(movie_feat[movie_idx]))
             acc_f[i] = feat_embeddings[movie_feat[movie_idx]].sum(axis=0)
             acc_f[i] -= feat_embeddings[feat_idx]
+            acc_f[i] *= scale[i]
 
         acc_f = movie_embeddings[feat_movie[feat_idx]] - acc_f
 
@@ -202,7 +203,7 @@ def optimize_features(
             acc_f[i] *= scale[i]
 
         acc_f = acc_f.sum(axis=0)
-        scale = scale.sum() + 1.0
+        scale = (scale**2).sum() + 1.0
 
         new_feat_embeddings[feat_idx] = acc_f / scale
 

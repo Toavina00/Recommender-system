@@ -13,11 +13,10 @@ wheels/
 data/
 
 # Artifacts
-artifacts/model/
+artifacts/
 
 # Cache
 *cache/
 
 # Jupyter
 .ipynb*/
-

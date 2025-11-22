@@ -5,42 +5,6 @@ import numpy as np
 
 
 @nb.njit
-def compute_loss(
-    r_lambda: float,
-    r_gamma: float,
-    r_tau: float,
-    movie_users: List[Tuple[np.ndarray, np.ndarray]],
-    user_bias: np.ndarray,
-    movie_bias: np.ndarray,
-    user_embeddings: np.ndarray,
-    movie_embeddings: np.ndarray,
-) -> float:
-    loss = 0.0
-
-    for movie_idx in nb.prange(len(movie_users)):
-        users, ratings = movie_users[movie_idx]
-
-        if len(ratings) == 0:
-            continue
-
-        e_vec = ratings - (
-            user_embeddings[users] @ movie_embeddings[movie_idx]
-            + user_bias[users]
-            + movie_bias[movie_idx]
-        )
-        e_sum = e_vec @ e_vec
-        loss += e_sum
-
-    loss *= r_lambda * 0.5
-    loss += r_gamma * 0.5 * (user_bias @ user_bias)
-    loss += r_gamma * 0.5 * (movie_bias @ movie_bias)
-    loss += r_tau * 0.5 * np.sum(user_embeddings * user_embeddings)
-    loss += r_tau * 0.5 * np.sum(movie_embeddings * movie_embeddings)
-
-    return loss
-
-
-@nb.njit
 def compute_rmse(
     user_movies: List[Tuple[np.ndarray, np.ndarray]],
     user_bias: np.ndarray,
@@ -70,140 +34,187 @@ def compute_rmse(
     return error
 
 
-@nb.njit(parallel=True)
-def optimize_users(
-    train_user_movies: List[Tuple[np.ndarray, np.ndarray]],
-    embedding_dim: int,
-    r_lambda: float,
-    r_gamma: float,
-    r_tau: float,
-    user_bias: np.ndarray,
-    movie_bias: np.ndarray,
-    user_embeddings: np.ndarray,
-    movie_embeddings: np.ndarray,
-) -> None:
-    for user_idx in nb.prange(len(train_user_movies)):
-        movies, ratings = train_user_movies[user_idx]
-
-        if len(ratings) == 0:
-            continue
-
-        new_user_bias = np.sum(
-            ratings
-            - (
-                movie_embeddings[movies] @ user_embeddings[user_idx]
-                + movie_bias[movies]
-            )
-        )
-        movie_mat = movie_embeddings[movies].T @ movie_embeddings[movies]
-        movie_vec = movie_embeddings[movies].T @ (
-            ratings - movie_bias[movies] - user_bias[user_idx]
-        )
-
-        movie_mat *= r_lambda
-        movie_mat += r_tau * np.eye(embedding_dim)
-        movie_vec *= r_lambda
-
-        new_user_bias *= r_lambda
-        new_user_bias /= r_lambda * len(ratings) + r_gamma
-
-        inv_movie_mat = np.linalg.inv(movie_mat)
-        new_user_embedding = inv_movie_mat @ movie_vec
-
-        user_embeddings[user_idx] = new_user_embedding
-        user_bias[user_idx] = new_user_bias
-
-
-@nb.njit(parallel=True)
-def optimize_movie(
-    train_movie_users: List[Tuple[np.ndarray, np.ndarray]],
-    embedding_dim: int,
-    r_lambda: float,
-    r_gamma: float,
-    r_tau: float,
-    user_bias: np.ndarray,
-    movie_bias: np.ndarray,
-    user_embeddings: np.ndarray,
-    movie_embeddings: np.ndarray,
-) -> None:
-    for movie_idx in nb.prange(len(train_movie_users)):
-        users, ratings = train_movie_users[movie_idx]
-
-        if len(ratings) == 0:
-            continue
-
-        new_movie_bias = np.sum(
-            ratings
-            - (user_embeddings[users] @ movie_embeddings[movie_idx] + user_bias[users])
-        )
-        users_mat = user_embeddings[users].T @ user_embeddings[users]
-        user_vec = user_embeddings[users].T @ (
-            ratings - user_bias[users] - movie_bias[movie_idx]
-        )
-
-        users_mat *= r_lambda
-        users_mat += r_tau * np.eye(embedding_dim)
-        user_vec *= r_lambda
-
-        new_movie_bias *= r_lambda
-        new_movie_bias /= r_lambda * len(ratings) + r_gamma
-
-        inv_user_mat = np.linalg.inv(users_mat)
-        new_movie_embedding = inv_user_mat @ user_vec
-
-        movie_embeddings[movie_idx] = new_movie_embedding
-        movie_bias[movie_idx] = new_movie_bias
-
-
 @nb.njit
-def update_params(
-    train_movie_users: List[Tuple[np.ndarray, np.ndarray]],
-    train_user_movies: List[Tuple[np.ndarray, np.ndarray]],
-    embedding_dim: int,
+def compute_elbo(
     r_lambda: float,
     r_gamma: float,
     r_tau: float,
-    user_bias: np.ndarray,
-    movie_bias: np.ndarray,
-    user_embeddings: np.ndarray,
-    movie_embeddings: np.ndarray,
+    user_movies: List[Tuple[np.ndarray, np.ndarray]],
+    user_mean_embedding: np.ndarray,
+    user_var_embedding: np.ndarray,
+    user_mean_bias: np.ndarray,
+    user_var_bias: np.ndarray,
+    movie_mean_embedding: np.ndarray,
+    movie_var_embedding: np.ndarray,
+    movie_mean_bias: np.ndarray,
+    movie_var_bias: np.ndarray,
 ):
-    optimize_users(
-        train_user_movies,
-        embedding_dim,
-        r_lambda,
-        r_gamma,
-        r_tau,
-        user_bias,
-        movie_bias,
-        user_embeddings,
-        movie_embeddings,
-    )
-    optimize_movie(
-        train_movie_users,
-        embedding_dim,
-        r_lambda,
-        r_gamma,
-        r_tau,
-        user_bias,
-        movie_bias,
-        user_embeddings,
-        movie_embeddings,
-    )
+    elbo = 0.0
+
+    for user_idx in range(len(user_movies)):
+        movies, ratings = user_movies[user_idx]
+
+        if len(ratings) == 0:
+            continue
+
+        elbo += ratings.T @ ratings
+        elbo -= 2.0 * (ratings.T @ movie_mean_bias[movies])
+        elbo -= (
+            2.0
+            * (ratings - movie_mean_bias[movies] - user_mean_bias[user_idx])
+            @ (movie_mean_embedding[movies] @ user_mean_embedding[user_idx])
+        )
+        elbo -= (
+            2.0 * np.sum(ratings - movie_mean_bias[movies]) * user_mean_bias[user_idx]
+        )
+
+        mat = (
+            np.diag(movie_var_embedding[movies].sum(axis=0))
+            + movie_mean_embedding[movies].T @ movie_mean_embedding[movies]
+        )
+        mat = (
+            np.diag(user_var_embedding[user_idx])
+            + np.outer(user_mean_embedding[user_idx], user_mean_embedding[user_idx])
+        ) @ mat
+
+        elbo += np.sum(np.diag(mat))
+
+    elbo *= -0.5 * r_lambda
+    elbo -= 0.5 * r_tau * np.sum(user_mean_embedding * user_mean_embedding)
+    elbo -= 0.5 * r_tau * np.sum(movie_mean_embedding * movie_mean_embedding)
+    elbo -= 0.5 * r_tau * np.sum(user_var_embedding)
+    elbo -= 0.5 * r_tau * np.sum(movie_var_embedding)
+    elbo -= 0.5 * (r_gamma + r_lambda) * np.sum(user_mean_bias**2 + user_var_bias)
+    elbo -= 0.5 * (r_gamma + r_lambda) * np.sum(movie_mean_bias**2 + movie_var_bias)
+
+    return elbo
 
 
 @nb.njit
+def update_users(
+    user_idx: int,
+    r_lambda: float,
+    r_gamma: float,
+    r_tau: float,
+    user_movies: List[Tuple[np.ndarray, np.ndarray]],
+    user_mean_embedding: np.ndarray,
+    user_var_embedding: np.ndarray,
+    user_mean_bias: np.ndarray,
+    user_var_bias: np.ndarray,
+    movie_mean_embedding: np.ndarray,
+    movie_var_embedding: np.ndarray,
+    movie_mean_bias: np.ndarray,
+):
+    embedding_dim = user_mean_embedding.shape[1]
+
+    movies, ratings = user_movies[user_idx]
+
+    if len(ratings) == 0:
+        return
+
+    # Bias Update
+    new_user_mean_bias = np.sum(
+        ratings
+        - (
+            movie_mean_embedding[movies] @ user_mean_embedding[user_idx]
+            + movie_mean_bias[movies]
+        )
+    )
+    new_user_mean_bias *= r_lambda
+    new_user_mean_bias /= r_lambda * len(ratings) + r_gamma
+
+    user_var_bias[user_idx] = 1.0 / (r_lambda * len(ratings) + r_gamma)
+    user_mean_bias[user_idx] = new_user_mean_bias
+
+    # Embedding update
+    movie_mat = movie_mean_embedding[movies].T @ movie_mean_embedding[movies]
+    movie_mat += np.diag(movie_var_embedding[movies].sum(axis=0))
+    movie_mat *= r_lambda
+    movie_mat += r_tau * np.eye(embedding_dim)
+
+    movie_vec = movie_mean_embedding[movies].T @ (
+        ratings - movie_mean_bias[movies] - movie_mean_bias[user_idx]
+    )
+    movie_vec *= r_lambda
+
+    inv_movie_mat = 1.0 / np.diag(movie_mat)
+    new_user_mean_embedding = np.diag(inv_movie_mat) @ movie_vec
+    new_user_var_embedding = inv_movie_mat
+
+    user_var_embedding[user_idx] = new_user_var_embedding
+    user_mean_embedding[user_idx] = new_user_mean_embedding
+
+
+@nb.njit
+def update_movie(
+    movie_idx: int,
+    r_lambda: float,
+    r_gamma: float,
+    r_tau: float,
+    movie_users: List[Tuple[np.ndarray, np.ndarray]],
+    user_mean_embedding: np.ndarray,
+    user_var_embedding: np.ndarray,
+    user_mean_bias: np.ndarray,
+    movie_mean_embedding: np.ndarray,
+    movie_var_embedding: np.ndarray,
+    movie_mean_bias: np.ndarray,
+    movie_var_bias: np.ndarray,
+):
+    embedding_dim = user_mean_embedding.shape[1]
+
+    users, ratings = movie_users[movie_idx]
+
+    if len(ratings) == 0:
+        return
+
+    # Bias Update
+    new_movie_mean_bias = np.sum(
+        ratings
+        - (
+            user_mean_embedding[users] @ movie_mean_embedding[movie_idx]
+            + user_mean_bias[users]
+        )
+    )
+    new_movie_mean_bias *= r_lambda
+    new_movie_mean_bias /= r_lambda * len(ratings) + r_gamma
+
+    movie_var_bias[movie_idx] = 1.0 / (r_lambda * len(ratings) + r_gamma)
+    movie_mean_bias[movie_idx] = new_movie_mean_bias
+
+    # Embedding update
+    users_mat = user_mean_embedding[users].T @ user_mean_embedding[users]
+    users_mat += np.diag(user_var_embedding[users].sum(axis=0))
+    users_mat *= r_lambda
+    users_mat += r_tau * np.eye(embedding_dim)
+
+    user_vec = user_mean_embedding[users].T @ (
+        ratings - user_mean_bias[users] - movie_mean_bias[movie_idx]
+    )
+    user_vec *= r_lambda
+
+    inv_user_mat = np.linalg.inv(users_mat)
+    new_movie_mean_embedding = inv_user_mat @ user_vec
+    new_movie_var_embedding = 1.0 / np.diag(users_mat)
+
+    movie_var_embedding[movie_idx] = new_movie_var_embedding
+    movie_mean_embedding[movie_idx] = new_movie_mean_embedding
+
+
+@nb.njit(parallel=True)
 def training_loop(
     train_user_movies: List[Tuple[np.ndarray, np.ndarray]],
     train_movie_users: List[Tuple[np.ndarray, np.ndarray]],
     val_user_movies: List[Tuple[np.ndarray, np.ndarray]],
-    val_movie_users: List[Tuple[np.ndarray, np.ndarray]],
     embedding_dim: int = 2,
-    r_lambda: float = 0.05,
+    r_lambda: float = 0.5,
     r_gamma: float = 0.05,
     r_tau: float = 0.05,
     n_iter: int = 10,
 ) -> Tuple[
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
     np.ndarray,
     np.ndarray,
     np.ndarray,
@@ -223,63 +234,113 @@ def training_loop(
         len(train_movie_users),
     )
 
-    user_bias = np.random.randn(n_user)
-    movie_bias = np.random.randn(n_movie)
-    user_embeddings = np.random.normal(
+    user_mean_bias = np.random.randn(n_user)
+    movie_mean_bias = np.random.randn(n_movie)
+    user_var_bias = np.random.randn(n_user)
+    movie_var_bias = np.random.randn(n_movie)
+
+    user_mean_embeddings = np.random.normal(
         0, np.sqrt(embedding_dim), (n_user, embedding_dim)
     )
-    movie_embeddings = np.random.normal(
+    user_var_embeddings = np.random.normal(
+        0, np.sqrt(embedding_dim), (n_user, embedding_dim)
+    )
+    movie_mean_embeddings = np.random.normal(
+        0, np.sqrt(embedding_dim), (n_movie, embedding_dim)
+    )
+    movie_var_embeddings = np.random.normal(
         0, np.sqrt(embedding_dim), (n_movie, embedding_dim)
     )
 
     for iter in range(n_iter):
-        update_params(
-            train_movie_users,
-            train_user_movies,
-            embedding_dim,
+        for user_idx in nb.prange(len(train_user_movies)):
+            update_users(
+                user_idx,
+                r_lambda,
+                r_gamma,
+                r_tau,
+                train_user_movies,
+                user_mean_embeddings,
+                user_var_embeddings,
+                user_mean_bias,
+                user_var_bias,
+                movie_mean_embeddings,
+                movie_var_embeddings,
+                movie_mean_bias,
+            )
+
+        for movie_idx in nb.prange(len(train_movie_users)):
+            update_movie(
+                movie_idx,
+                r_lambda,
+                r_gamma,
+                r_tau,
+                train_movie_users,
+                user_mean_embeddings,
+                user_var_embeddings,
+                user_mean_bias,
+                movie_mean_embeddings,
+                movie_var_embeddings,
+                movie_mean_bias,
+                movie_var_bias,
+            )
+
+        train_loss[iter] = compute_elbo(
             r_lambda,
             r_gamma,
             r_tau,
-            user_bias,
-            movie_bias,
-            user_embeddings,
-            movie_embeddings,
+            train_user_movies,
+            user_mean_embeddings,
+            user_var_embeddings,
+            user_mean_bias,
+            user_var_bias,
+            movie_mean_embeddings,
+            movie_var_embeddings,
+            movie_mean_bias,
+            movie_var_bias,
         )
 
-        train_loss[iter] = compute_loss(
+        val_loss[iter] = compute_elbo(
             r_lambda,
             r_gamma,
             r_tau,
-            train_movie_users,
-            user_bias,
-            movie_bias,
-            user_embeddings,
-            movie_embeddings,
+            val_user_movies,
+            user_mean_embeddings,
+            user_var_embeddings,
+            user_mean_bias,
+            user_var_bias,
+            movie_mean_embeddings,
+            movie_var_embeddings,
+            movie_mean_bias,
+            movie_var_bias,
         )
+
         train_rmse[iter] = compute_rmse(
-            train_user_movies, user_bias, movie_bias, user_embeddings, movie_embeddings
-        )
-        val_loss[iter] = compute_loss(
-            r_lambda,
-            r_gamma,
-            r_tau,
-            val_movie_users,
-            user_bias,
-            movie_bias,
-            user_embeddings,
-            movie_embeddings,
+            train_user_movies,
+            user_mean_bias,
+            movie_mean_bias,
+            user_mean_embeddings,
+            movie_mean_embeddings,
         )
         val_rmse[iter] = compute_rmse(
-            val_user_movies, user_bias, movie_bias, user_embeddings, movie_embeddings
+            val_user_movies,
+            user_mean_bias,
+            movie_mean_bias,
+            user_mean_embeddings,
+            movie_mean_embeddings,
         )
 
     return (
         train_loss,
-        train_rmse,
         val_loss,
+        train_rmse,
         val_rmse,
-        user_bias,
-        movie_bias,
-        user_embeddings,
-        movie_embeddings,
+        user_mean_embeddings,
+        user_var_embeddings,
+        user_mean_bias,
+        user_var_bias,
+        movie_mean_embeddings,
+        movie_var_embeddings,
+        movie_mean_bias,
+        movie_var_bias,
     )
