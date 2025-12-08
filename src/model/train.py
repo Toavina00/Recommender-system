@@ -16,7 +16,7 @@ def train_base(
     r_lambda: float = 1.0,
     r_gamma: float = 0.1,
     r_tau: float = 0.1,
-) -> Dict[str, np.ndarray]:
+) -> Dict:
     (
         train_loss,
         train_rmse,
@@ -51,10 +51,12 @@ def train_base(
         "train_rmse": train_rmse,
         "val_loss": val_loss,
         "val_rmse": val_rmse,
-        "user_bias": user_bias,
-        "movie_bias": movie_bias,
-        "user_embedding": user_embedding,
-        "movie_embedding": movie_embedding,
+        "embeddings": {
+            "user_bias": user_bias,
+            "movie_bias": movie_bias,
+            "user_embedding": user_embedding,
+            "movie_embedding": movie_embedding,
+        }
     }
 
 
@@ -67,7 +69,7 @@ def train_feat(
     r_lambda: float = 1.0,
     r_gamma: float = 0.1,
     r_tau: float = 0.1,
-) -> Dict[str, np.ndarray]:
+) -> Dict:
     movie_feat = [np.array(arr) for arr in metadata.movie_feat]
     feat_movie = [np.array(arr) for arr in metadata.feat_movie]
 
@@ -108,11 +110,13 @@ def train_feat(
         "train_rmse": train_rmse,
         "val_loss": val_loss,
         "val_rmse": val_rmse,
-        "user_bias": user_bias,
-        "movie_bias": movie_bias,
-        "user_embedding": user_embedding,
-        "movie_embedding": movie_embedding,
-        "feat_embedding": feat_embedding,
+        "embeddings": {
+            "user_bias": user_bias,
+            "movie_bias": movie_bias,
+            "user_embedding": user_embedding,
+            "movie_embedding": movie_embedding,
+            "feat_embedding": feat_embedding,
+        }
     }
 
 
@@ -124,7 +128,7 @@ def train_variational(
     r_lambda: float = 1.0,
     r_gamma: float = 0.1,
     r_tau: float = 0.1,
-) -> Dict[str, np.ndarray]:
+) -> Dict:
     (
         train_loss,
         train_rmse,
@@ -160,12 +164,14 @@ def train_variational(
         "train_rmse": train_rmse,
         "val_loss": val_loss,
         "val_rmse": val_rmse,
-        "user_mean_embedding": user_mean_embedding,
-        "user_var_embedding": user_var_embedding,
-        "user_mean_bias": user_mean_bias,
-        "user_var_bias": user_var_bias,
-        "movie_mean_embedding": movie_mean_embedding,
-        "movie_var_embedding": movie_var_embedding,
-        "movie_mean_bias": movie_mean_bias,
-        "movie_var_bias": movie_var_bias,
+        "embeddings": {
+            "user_mean_embedding": user_mean_embedding,
+            "user_var_embedding": user_var_embedding,
+            "user_mean_bias": user_mean_bias,
+            "user_var_bias": user_var_bias,
+            "movie_mean_embedding": movie_mean_embedding,
+            "movie_var_embedding": movie_var_embedding,
+            "movie_mean_bias": movie_mean_bias,
+            "movie_var_bias": movie_var_bias,
+        }
     }
