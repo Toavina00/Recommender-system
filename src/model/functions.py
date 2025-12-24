@@ -22,8 +22,8 @@ def new_user_base(
     user_bias = np.random.randn(1)
     user_embedding = np.random.normal(0, np.sqrt(embedding_dim), (1, embedding_dim))
 
-    movies = np.array([x[0] for x in movies_rating])
-    ratings = np.array([x[1] for x in movies_rating])
+    movies = np.array([x[0] for x in movies_rating], dtype=int)
+    ratings = np.array([x[1] for x in movies_rating], dtype=np.float64)
 
     for _ in range(n_iter):
         base_user_bias(
