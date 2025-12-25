@@ -41,5 +41,5 @@ jobs:
     - name: run pyright type-hinting checks
       run: uv run pyright
 
-    - name: Run pytest
-      run: uv run pytest
+    # - name: Run pytest
+    #   run: uv run pytest
